@@ -2,19 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Video extends Model
+class Comment extends Model
 {
-    use HasFactory;
     protected $fillable = [
         'user_id',
-        'title',
-        'description',
-        'thumbnail_path',
-        'video_path',
-        'views'
+        'video_id',
+        'content',
     ];
 
     public function user()
@@ -22,9 +17,9 @@ class Video extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function comments()
+    public function video()
     {
-        return $this->hasMany(Comment::class);
+        return $this->belongsTo(Video::class);
     }
 
     public function likes()
