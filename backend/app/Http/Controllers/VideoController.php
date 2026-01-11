@@ -10,7 +10,10 @@ class VideoController extends Controller
 {
     public function index(): JsonResponse
     {
-        $videos = Video::with('user:id,username,name,surname')->latest()->get();
+        $videos = Video::with(['user:id,username,name,surname', 'likes', 'comments.user:id,username,name,surname'])
+            ->withCount('comments')
+            ->latest()
+            ->get();
         return response()->json($videos);
     }
 }
