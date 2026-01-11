@@ -30,6 +30,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'User registered successfully.',
+            // 'message' => 'User registered successfully. Please check your email for activation link.',
             'user' => $user
         ], 201);
     }
@@ -53,6 +54,14 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $request->email)->firstOrFail();
+
+        /*
+        if (!$user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Email not verified. Please check your inbox.'
+            ], 403);
+        }
+        */
 
         RateLimiter::clear($key);
 
