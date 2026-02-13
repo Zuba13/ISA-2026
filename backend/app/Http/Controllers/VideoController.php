@@ -16,4 +16,16 @@ class VideoController extends Controller
             ->get();
         return response()->json($videos);
     }
+
+    public function show($id): JsonResponse
+    {
+        $video = Video::with(['user:id,username,name,surname', 'likes'])
+            ->withCount('comments')
+            ->findOrFail($id);
+
+        // Atomic increment of views
+        $video->increment('views');
+
+        return response()->json($video);
+    }
 }

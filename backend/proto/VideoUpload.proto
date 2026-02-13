@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package video;
+
+message UploadEvent {
+    string title = 1;
+    uint64 size = 2;
+    string author = 3;
+    string timestamp = 4;
+}
