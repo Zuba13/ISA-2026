@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\VideoStarted;
+use App\Events\VideoSynced;
 use App\Models\Room;
 use App\Models\Participant;
 use Illuminate\Http\Request;
@@ -11,6 +12,32 @@ use Illuminate\Support\Str;
 
 class WatchPartyController extends Controller
 {
+    public function syncVideo(Request $request, $roomId)
+    {
+        $request->validate([
+            'video_id' => 'required|integer',
+            'current_time' => 'required|numeric',
+            'is_playing' => 'required|boolean',
+        ]);
+
+        $room = Room::findOrFail($roomId);
+
+        if ($room->creator_id !== Auth::id()) {
+             // In some cases we might want to allow others, but usually creator is master
+            return response()->json(['message' => 'Only the creator can sync the video'], 403);
+        }
+
+        broadcast(new VideoSynced(
+            $room->id,
+            $request->video_id,
+            $request->current_time,
+            $request->is_playing,
+            Auth::id()
+        ))->toOthers();
+
+        return response()->json(['message' => 'Video synced']);
+    }
+
     public function createRoom(Request $request)
     {
         $request->validate([
@@ -68,6 +95,29 @@ class WatchPartyController extends Controller
 
     public function getActiveRooms()
     {
-        return Room::with('creator:id,username')->latest()->get();
+        return Room::with('creator:id,username')
+            ->withCount('participants')
+            ->latest()
+            ->get();
+    }
+
+    public function show($id)
+    {
+        $room = Room::with(['creator:id,username', 'participants.user:id,username', 'currentVideo'])
+            ->withCount('participants')
+            ->findOrFail($id);
+
+        return response()->json($room);
+    }
+
+    public function leaveRoom($id)
+    {
+        $room = Room::findOrFail($id);
+
+        Participant::where('room_id', $room->id)
+            ->where('user_id', Auth::id())
+            ->delete();
+
+        return response()->json(['message' => 'Left the room']);
     }
 }

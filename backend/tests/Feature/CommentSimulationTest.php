@@ -53,8 +53,8 @@ class CommentSimulationTest extends TestCase
         // First page (10 comments)
         $response = $this->getJson("/api/videos/{$video->id}/comments?page=1");
         $response->assertStatus(200);
-        $response->assertJsonCount(10, 'data.data');
-        $this->assertEquals(25, $response->json('data.total'));
+        $response->assertJsonCount(10, 'data');
+        $this->assertEquals(25, $response->json('total'));
 
         // Verify caching: check if cache key exists
         $cacheKey = "video_{$video->id}_comments_page_1";

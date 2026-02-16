@@ -17,6 +17,21 @@ class Video extends Model
         'views'
     ];
 
+    protected $appends = ['video_url'];
+
+    public function getVideoUrlAttribute(): string
+    {
+        $path = $this->video_path;
+
+        // If it's already a full URL, return as-is
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // Otherwise, build the streaming URL
+        return url('/api/videos/' . $this->id . '/stream');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
