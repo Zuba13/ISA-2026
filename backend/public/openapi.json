@@ -1,0 +1,115 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Jutjubić API",
+        "version": "1.0.0",
+        "description": "API for the Jutjubić social video platform"
+    },
+    "servers": [
+        {
+            "url": "http://localhost/api"
+        }
+    ],
+    "paths": {
+        "/register": {
+            "post": {
+                "summary": "Register a new user",
+                "parameters": [],
+                "responses": {
+                    "201": {
+                        "description": "User created"
+                    }
+                }
+            }
+        },
+        "/login": {
+            "post": {
+                "summary": "Authenticate user",
+                "responses": {
+                    "200": {
+                        "description": "Token returned"
+                    }
+                }
+            }
+        },
+        "/videos": {
+            "get": {
+                "summary": "List videos (latest first)",
+                "responses": {
+                    "200": {
+                        "description": "Array of videos"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Upload a video (Transactional)",
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Video created"
+                    }
+                }
+            }
+        },
+        "/videos/{id}/comments": {
+            "get": {
+                "summary": "Get paginated comments (Cached)",
+                "responses": {
+                    "200": {
+                        "description": "Comments list"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Add comment (Rate limited 60/hr)",
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Comment added"
+                    }
+                }
+            }
+        },
+        "/rooms": {
+            "post": {
+                "summary": "Create watch party room",
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Room created"
+                    }
+                }
+            }
+        },
+        "/mq/benchmark": {
+            "get": {
+                "summary": "Run JSON vs Protobuf benchmark",
+                "responses": {
+                    "200": {
+                        "description": "Benchmark results"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        }
+    }
+}

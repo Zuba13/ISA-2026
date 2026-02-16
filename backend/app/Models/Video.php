@@ -14,10 +14,28 @@ class Video extends Model
         'description',
         'thumbnail_path',
         'video_path',
-        'views'
+        'views',
+        'tags',
+        'location'
     ];
 
-    protected $appends = ['video_url'];
+    protected $casts = [
+        'tags' => 'array'
+    ];
+
+    protected $appends = ['video_url', 'thumbnail'];
+
+    public function getThumbnailAttribute(): string
+    {
+        $path = $this->thumbnail_path;
+        if (!$path) return '';
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return url('/api/videos/' . $this->id . '/thumbnail');
+    }
 
     public function getVideoUrlAttribute(): string
     {

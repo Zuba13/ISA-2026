@@ -19,4 +19,23 @@ class UserController extends Controller
         $user = User::with('videos')->findOrFail($id);
         return response()->json($user);
     }
+
+    public function update(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'surname' => 'sometimes|string|max:255',
+            'username' => 'sometimes|string|max:255|unique:users,username,' . $user->id,
+            'address' => 'sometimes|string|max:255',
+        ]);
+
+        $user->update($request->only(['name', 'surname', 'username', 'address']));
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'user' => $user
+        ]);
+    }
 }

@@ -55,13 +55,11 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->firstOrFail();
 
-        /*
         if (!$user->hasVerifiedEmail()) {
             return response()->json([
                 'message' => 'Email not verified. Please check your inbox.'
             ], 403);
         }
-        */
 
         RateLimiter::clear($key);
 
