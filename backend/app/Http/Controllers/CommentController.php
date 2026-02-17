@@ -36,7 +36,6 @@ class CommentController extends Controller
     {
         $userId = Auth::id();
         
-        // Rate limiting: 60 comments per hour per user
         $oneHourAgo = now()->subHour();
         $commentCount = Comment::where('user_id', $userId)
             ->where('created_at', '>=', $oneHourAgo)
@@ -77,7 +76,6 @@ class CommentController extends Controller
 
         $comment = Comment::findOrFail($id);
 
-        // Check if user owns the comment
         if ($comment->user_id !== Auth::id()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -86,7 +84,6 @@ class CommentController extends Controller
             'content' => $request->content,
         ]);
 
-        // Invalidate cache for this video's comments
         \Illuminate\Support\Facades\Cache::forget("video_{$comment->video_id}_comments_page_1");
 
         $comment->load(['user:id,username,name,surname', 'likes']);

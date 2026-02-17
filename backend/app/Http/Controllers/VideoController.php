@@ -38,27 +38,31 @@ class VideoController extends Controller
                 $thumbnail = $request->file('thumbnail');
                 $img = null;
                 $extension = strtolower($thumbnail->getClientOriginalExtension());
+                
                 if ($extension === 'jpg' || $extension === 'jpeg') {
-                    $img = imagecreatefromjpeg($thumbnail->getRealPath());
+                    $img = @imagecreatefromjpeg($thumbnail->getRealPath());
                 } elseif ($extension === 'png') {
-                    $img = imagecreatefrompng($thumbnail->getRealPath());
+                    $img = @imagecreatefrompng($thumbnail->getRealPath());
                 } elseif ($extension === 'webp') {
-                    $img = imagecreatefromwebp($thumbnail->getRealPath());
+                    $img = @imagecreatefromwebp($thumbnail->getRealPath());
                 } elseif ($extension === 'gif') {
-                    $img = imagecreatefromgif($thumbnail->getRealPath());
+                    $img = @imagecreatefromgif($thumbnail->getRealPath());
                 }
 
                 if ($img) {
                     ob_start();
                     imagejpeg($img, null, 75); 
                     $compressedImage = ob_get_clean();
-                    // Always use .jpg extension for compressed thumbnails to be consistent with imagejpeg
-                    $thumbnailName = time() . '_' . pathinfo($thumbnail->getClientOriginalName(), PATHINFO_FILENAME) . '.jpg';
+                    
+                    // Sanitize filename
+                    $safeName = preg_replace('/[^A-Za-z0-9]/', '_', pathinfo($thumbnail->getClientOriginalName(), PATHINFO_FILENAME));
+                    $thumbnailName = time() . '_' . $safeName . '.jpg';
                     $thumbnailPath = 'thumbnails/' . $thumbnailName;
+                    
                     Storage::disk('public')->put($thumbnailPath, $compressedImage);
                     imagedestroy($img);
                 } else {
-                    $thumbnailPath = $request->file('thumbnail')->store('thumbnails', 'public');
+                    $thumbnailPath = $thumbnail->store('thumbnails', 'public');
                 }
             }
 
@@ -164,10 +168,12 @@ class VideoController extends Controller
         $video = Video::findOrFail($id);
         $cacheKey = "thumbnail_data_{$id}";
 
-        // Requirement: Caching thumbnails on the backend
-        $imageData = Cache::get($cacheKey);
-        
-        if (!$imageData) {
+        $cachedBase64 = Cache::get($cacheKey);
+        $imageData = null;
+
+        if ($cachedBase64) {
+            $imageData = base64_decode($cachedBase64);
+        } else {
             $path = $video->thumbnail_path;
             if (str_starts_with($path, '/storage/')) {
                 $path = substr($path, strlen('/storage/'));
@@ -175,7 +181,8 @@ class VideoController extends Controller
 
             if (Storage::disk('public')->exists($path)) {
                 $imageData = Storage::disk('public')->get($path);
-                Cache::put($cacheKey, $imageData, now()->addHours(24));
+                // Base64 encode to avoid database character encoding issues with binary data
+                Cache::put($cacheKey, base64_encode($imageData), now()->addHours(24));
             }
         }
 
@@ -183,55 +190,11 @@ class VideoController extends Controller
             abort(404, 'Thumbnail not found');
         }
 
-        // Detect actual mime type from binary data
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $mimeType = $finfo->buffer($imageData);
 
         return response($imageData)->header('Content-Type', $mimeType);
     }
 
-    private function compressImage($path)
-    {
-        if (!extension_loaded('gd')) return;
-
-        $info = getimagesize($path);
-        if (!$info) return;
-
-        $image = null;
-        if ($info['mime'] == 'image/jpeg') $image = imagecreatefromjpeg($path);
-        elseif ($info['mime'] == 'image/png') $image = imagecreatefrompng($path);
-
-        if ($image) {
-            // Resize if too large
-            if ($info[0] > 1280) {
-                $image = imagescale($image, 1280);
-            }
-            imagejpeg($image, $path, 75); // 75% quality
-            imagedestroy($image);
-        }
-    }
-
-    private function dispatchUploadEvent($video)
-    {
-        $data = [
-            'id' => $video->id,
-            'title' => $video->title,
-            'size' => Storage::disk('public')->size($video->video_path),
-            'author' => Auth::user()->username,
-            'timestamp' => now()->toIso8601String()
-        ];
-
-        // 3.14 Compare JSON vs Protobuf
-        $json = json_encode($data);
-        
-        // Simulating Protobuf binary packing
-        $proto = pack('VVa*a*', $data['id'], strlen($data['title']), $data['title'], $data['author']);
-
-        // Log for verification (this would normally go to RabbitMQ/Redis)
-        \Illuminate\Support\Facades\Log::info("MQ UploadEvent Dispatch", [
-            'json_size' => strlen($json),
-            'proto_size' => strlen($proto),
-            'advantage' => round((1 - strlen($proto)/strlen($json)) * 100, 2) . '%'
-        ]);
-    }
+    // Private methods removed as logic is now inline or unused.
 }
